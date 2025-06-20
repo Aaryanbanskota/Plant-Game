@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Garden Game</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <style>
+        /* CSS Styles */
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --secondary: #FFC107;
+            --danger: #F44336;
+            --light: #F1F8E9;
+            --dark: #2E7D32;
+        }
+
+        body {
+            font-family: 'Comic Neue', cursive;
+            background: #E8F5E9;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+        }
+
+        .screen {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Login Screen */
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 20px auto;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-title {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #C8E6C9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .login-form input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+
+        .login-form button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .login-form button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .error {
+            color: var(--danger);
+            margin-top: 10px;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        /* Game Screen */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            animation: slideDown 0.5s;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .admin-badge {
+            background: var(--danger);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .currency {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .coin {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .xp-bar-container {
+            width: 100px;
+            height: 10px;
+            background: #E0E0E0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .xp-bar {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        /* Main Game Area */
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+
+        .garden-area {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .garden-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .season-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #E3F2FD;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .garden-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .garden-plot {
+            aspect-ratio: 1/1;
+            background: #C8E6C9;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .garden-plot:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .plant {
+            font-size: 30px;
+            z-index: 2;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .growth-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 5px;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .plot-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5px;
+        }
+
+        .plot-water {
+            align-self: flex-start;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .plot-fert {
+            align-self: flex-end;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .plot-owner {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 2px 5px;
+            border-radius: 10px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        button:disabled {
+            background: #BDBDBD;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+        }
+
+        .btn-secondary:hover {
+            background: #1976D2;
+        }
+
+        .btn-warning {
+            background: var(--secondary);
+            color: #212121;
+        }
+
+        .btn-warning:hover {
+            background: #FFA000;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #D32F2F;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #C8E6C9;
+            background: white;
+            font-family: inherit;
+            min-width: 150px;
+        }
+
+        .status {
+            padding: 15px;
+            background: var(--light);
+            border-radius: 10px;
+            margin: 10px 0;
+            min-height: 20px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .panel-title {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Shop */
+        .shop-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .shop-item {
+            background: var(--light);
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .shop-item:hover {
+            background: #DCEDC8;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .shop-item.selected {
+            border-color: var(--primary);
+            background: #DCEDC8;
+        }
+
+        .shop-item-icon {
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+
+        .shop-item-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .shop-item-price {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        /* Inventory */
+        .inventory-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .inventory-item {
+            background: var(--light);
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .inventory-item-count {
+            background: var(--primary);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        /* Multiplayer */
+        .online-players {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .player {
+            background: #E3F2FD;
+            padding: 8px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+
+        .player-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2196F3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* Achievements */
+        .achievements-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .achievement {
+            background: #FFF3E0;
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .achievement.locked {
+            background: #EEEEEE;
+            color: #9E9E9E;
+        }
+
+        .achievement-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .achievement-info {
+            flex-grow: 1;
+        }
+
+        .achievement-title {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .achievement-desc {
+            font-size: 12px;
+            color: #616161;
+        }
+
+        .achievement.locked .achievement-desc {
+            color: #BDBDBD;
+        }
+
+        .achievement-progress {
+            height: 4px;
+            background: #BCAAA4;
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .achievement-progress-bar {
+            height: 100%;
+            background: var(--secondary);
+            width: 0%;
+        }
+
+        .achievement-reward {
+            font-size: 12px;
+            color: var(--secondary);
+            font-weight: bold;
+            margin-top: 3px;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+            animation: slideIn 0.5s, fadeOut 0.5s 2.5s forwards;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .garden-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .garden-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+        <div class="login-container">
+            <h1 class="login-title">🌱 Ultimate Garden Game 🌸</h1>
+            <div class="login-form">
+                <input type="email" id="email" placeholder="Your Email" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button id="login-btn">Start Gardening</button>
+                <button id="guest-btn" class="btn-secondary">Play as Guest</button>
+                <p id="login-error" class="error"></p>
+                <p style="margin-top: 15px; font-size: 14px;">
+                    Try admin: admin@garden.com / 123456<br>
+                    Or player: player@garden.com / 123456
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen hidden">
+        <!-- Header -->
+        <div class="game-header">
+            <div class="player-info">
+                <div class="avatar" id="player-avatar">Y</div>
+                <div>
+                    <span id="username">Player</span>
+                    <span id="admin-badge" class="admin-badge hidden">ADMIN</span>
+                    <div class="xp-bar-container">
+                        <div class="xp-bar" id="xp-bar"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="currency">
+                <span id="coins">100</span>
+                <span class="coin">💰</span>
+                <span id="gems">5</span>
+                <span>💎</span>
+            </div>
+            
+            <div class="season-indicator">
+                <span id="season-icon">🌱</span>
+                <span id="season-name">Spring</span>
+            </div>
+        </div>
+
+        <!-- Main Game Area -->
+        <div class="game-container">
+            <div class="garden-area">
+                <div class="garden-title">
+                    <h2 style="margin: 0;">Your Garden</h2>
+                    <div>
+                        <span id="weather-icon">☀️</span>
+                        <span id="weather-text">Sunny</span>
+                    </div>
+                </div>
+                
+                <div class="garden-grid" id="garden"></div>
+                
+                <div class="status" id="status">Welcome to your garden! Select a seed to plant.</div>
+                
+                <div class="controls">
+                    <select id="plant-select">
+                        <option value="">-- Select Seed --</option>
+                        <option value="🌱">Flower (10 coins)</option>
+                        <option value="🌻">Sunflower (20 coins)</option>
+                        <option value="🥕">Carrot (30 coins)</option>
+                    </select>
+                    <button id="plant-btn" disabled>🌱 Plant</button>
+                    <button id="water-btn" class="btn-secondary" disabled>💧 Water All (5 coins)</button>
+                    <button id="harvest-btn" class="btn-warning" disabled>🛒 Harvest Ready</button>
+                    <button id="fertilize-btn" class="btn-secondary" disabled>✨ Fertilize All (20 coins)</button>
+                </div>
+                
+                <div id="admin-panel" class="hidden">
+                    <h3>👑 Admin Powers</h3>
+                    <div class="controls">
+                        <button id="admin-grow" class="btn-danger">⚡ Instant Grow All</button>
+                        <button id="admin-money" class="btn-danger">💰 +1000 Coins</button>
+                        <button id="admin-seeds" class="btn-danger">🌱 +10 All Seeds</button>
+                        <button id="admin-weather" class="btn-danger">🌦 Change Weather</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Shop Panel -->
+                <div class="panel">
+                    <h3 class="panel-title">🛒 Garden Shop</h3>
+                    <div class="shop-items" id="shop-items">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Inventory Panel -->
+                <div class="panel">
+                    <h3 class="panel-title">🎒 Inventory</h3>
+                    <div class="inventory-items" id="inventory">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Multiplayer Panel -->
+                <div class="panel">
+                    <h3 class="panel-title">👥 Garden Friends (Online: <span id="online-count">0</span>)</h3>
+                    <div class="online-players" id="online-players">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Achievements Panel -->
+                <div class="panel">
+                    <h3 class="panel-title">🏆 Achievements</h3>
+                    <div class="achievements-list" id="achievements">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Daily Reward Panel -->
+                <div class="panel">
+                    <h3 class="panel-title">🎁 Daily Reward</h3>
+                    <button id="daily-reward-btn" class="btn-warning">🎁 Claim Daily Reward</button>
+                    <p style="font-size: 12px; margin-top: 10px;">Next reward in: <span id="next-reward">23h 59m</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+
+    <script>
+        // ======================
+        // Firebase Configuration
+        // ======================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzqZvJ0p3X3X3X3X3X3X3X3X3X3X3X3X3X",
+            authDomain: "garden-game-demo.firebaseapp.com",
+            databaseURL: "https://garden-game-demo.firebaseio.com",
+            projectId: "garden-game-demo",
+            storageBucket: "garden-game-demo.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:3X3X3X3X3X3X3X3X3X3X3X"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+        
+        // ======================
+        // Game Data
+        // ======================
+        const plants = {
+            "🌱": { name: "Flower", cost: 10, sellPrice: 15, growthTime: 10000, xp: 1, season: "all" },
+            "🌻": { name: "Sunflower", cost: 20, sellPrice: 30, growthTime: 15000, xp: 2, season: "summer" },
+            "🥕": { name: "Carrot", cost: 30, sellPrice: 50, growthTime: 20000, xp: 3, season: "spring" },
+            "🍅": { name: "Tomato", cost: 50, sellPrice: 80, growthTime: 25000, xp: 5, season: "summer" },
+            "🍓": { name: "Strawberry", cost: 80, sellPrice: 130, growthTime: 30000, xp: 8, season: "spring" },
+            "🎃": { name: "Pumpkin", cost: 120, sellPrice: 200, growthTime: 40000, xp: 12, season: "autumn" },
+            "🌲": { name: "Christmas Tree", cost: 200, sellPrice: 350, growthTime: 60000, xp: 20, season: "winter" }
+        };
+        
+        const seasons = [
+            { name: "Spring", icon: "🌱", duration: 120000, weather: ["☀️", "🌧", "⛅"] },
+            { name: "Summer", icon: "☀️", duration: 120000, weather: ["☀️", "🌧", "🌪"] },
+            { name: "Autumn", icon: "🍂", duration: 120000, weather: ["☀️", "🌧", "⛅"] },
+            { name: "Winter", icon: "❄️", duration: 120000, weather: ["❄️", "☀️", "🌧"] }
+        ];
+        
+        const weatherEffects = {
+            "☀️": { growthMultiplier: 1.2, text: "Sunny - Plants grow faster!" },
+            "🌧": { growthMultiplier: 1.5, text: "Rainy - Plants grow much faster!" },
+            "⛅": { growthMultiplier: 1.0, text: "Cloudy - Normal growth" },
+            "🌪": { growthMultiplier: 0.7, text: "Stormy - Growth slowed" },
+            "❄️": { growthMultiplier: 0.5, text: "Snowy - Growth very slow" }
+        };
+        
+        const achievements = [
+            { id: "first_plant", title: "First Plant", desc: "Plant your first seed", reward: 50, icon: "🌱", condition: (stats) => stats.plantsPlanted >= 1 },
+            { id: "season_master", title: "Season Master", desc: "Grow plants in all 4 seasons", reward: 200, icon: "🌦", condition: (stats) => stats.seasonsPlayed.length >= 4 },
+            { id: "millionaire", title: "Millionaire", desc: "Earn 1000 coins", reward: 100, icon: "💰", condition: (stats) => stats.totalCoinsEarned >= 1000 },
+            { id: "expert_gardener", title: "Expert Gardener", desc: "Reach level 10", reward: 500, icon: "👨‍🌾", condition: (stats) => stats.level >= 10 },
+            { id: "collection_complete", title: "Complete Collection", desc: "Grow all plant types", reward: 300, icon: "🌿", condition: (stats) => stats.plantsGrown.length >= Object.keys(plants).length }
+        ];
+        
+        // ======================
+        // Game State
+        // ======================
+        let gameState = {
+            // Player stats
+            coins: 100,
+            gems: 5,
+            xp: 0,
+            level: 1,
+            totalPlants: 0,
+            totalCoinsEarned: 0,
+            plantsGrown: [],
+            seasonsPlayed: [],
+            achievementsEarned: [],
+            lastDailyReward: 0,
+            
+            // Garden state
+            gardenPlots: Array(15).fill().map(() => ({
+                plant: null,
+                growth: 0, // 0 = empty, 1 = planted, 2 = growing, 3 = ready
+                watered: false,
+                fertilized: false,
+                growthStart: null,
+                growthProgress: 0,
+                owner: null
+            })),
+            
+            // Inventory
+            inventory: {
+                "🌱": 5,
+                "🌻": 3,
+                "🥕": 2,
+                "🍅": 0,
+                "🍓": 0,
+                "🎃": 0,
+                "🌲": 0
+            },
+            
+            // Current season/weather
+            currentSeason: 0,
+            seasonStartTime: Date.now(),
+            currentWeather: "☀️",
+            weatherChangeTime: Date.now(),
+            
+            // Multiplayer
+            onlinePlayers: {}
+        };
+        
+        // Current user
+        let currentUser = null;
+        let selectedPlant = null;
+        let weatherInterval, seasonInterval;
+        
+        // ======================
+        // DOM Elements
+        // ======================
+        const loginScreen = document.getElementById("login-screen");
+        const gameScreen = document.getElementById("game-screen");
+        const emailInput = document.getElementById("email");
+        const passwordInput = document.getElementById("password");
+        const loginBtn = document.getElementById("login-btn");
+        const guestBtn = document.getElementById("guest-btn");
+        const loginError = document.getElementById("login-error");
+        const logoutBtn = document.getElementById("logout-btn");
+        const usernameDisplay = document.getElementById("username");
+        const playerAvatar = document.getElementById("player-avatar");
+        const adminBadge = document.getElementById("admin-badge");
+        const coinsDisplay = document.getElementById("coins");
+        const gemsDisplay = document.getElementById("gems");
+        const xpBar = document.getElementById("xp-bar");
+        const garden = document.getElementById("garden");
+        const plantSelect = document.getElementById("plant-select");
+        const plantBtn = document.getElementById("plant-btn");
+        const waterBtn = document.getElementById("water-btn");
+        const harvestBtn = document.getElementById("harvest-btn");
+        const fertilizeBtn = document.getElementById("fertilize-btn");
+        const statusDisplay = document.getElementById("status");
+        const adminPanel = document.getElementById("admin-panel");
+        const adminGrowBtn = document.getElementById("admin-grow");
+        const adminMoneyBtn = document.getElementById("admin-money");
+        const adminSeedsBtn = document.getElementById("admin-seeds");
+        const adminWeatherBtn = document.getElementById("admin-weather");
+        const shopItems = document.getElementById("shop-items");
+        const inventory = document.getElementById("inventory");
+        const onlinePlayers = document.getElementById("online-players");
+        const onlineCount = document.getElementById("online-count");
+        const achievementsList = document.getElementById("achievements");
+        const dailyRewardBtn = document.getElementById("daily-reward-btn");
+        const nextReward = document.getElementById("next-reward");
+        const seasonIcon = document.getElementById("season-icon");
+        const seasonName = document.getElementById("season-name");
+        const weatherIcon = document.getElementById("weather-icon");
+        const weatherText = document.getElementById("weather-text");
+        const notificationContainer = document.getElementById("notification-container");
+        
+        // ======================
+        // Game Functions
+        // ======================
+        function initGame() {
+            // Load saved data
+            loadGame();
+            
+            // Initialize UI
+            updateUI();
+            renderGarden();
+            updateShop();
+            updateInventory();
+            updateAchievements();
+            updateOnlinePlayers();
+            startWeatherCycle();
+            startSeasonCycle();
+            updateDailyReward();
+            
+            // Set up realtime database listeners
+            setupMultiplayer();
+            
+            // Start game loop
+            setInterval(gameLoop, 1000);
+        }
+        
+        function gameLoop() {
+            updateGarden();
+            updateUI();
+            checkAchievements();
+        }
+        
+        function updateGarden() {
+            let anyPlantGrowing = false;
+            let anyPlantReady = false;
+            
+            gameState.gardenPlots.forEach(plot => {
+                if (plot.growth === 2 && plot.growthStart) {
+                    // Calculate growth progress
+                    const elapsed = Date.now() - plot.growthStart;
+                    let growthTime = plants[plot.plant].growthTime;
+                    
+                    // Apply modifiers
+                    if (plot.watered) growthTime *= 0.8; // 20% faster
+                    if (plot.fertilized) growthTime *= 0.6; // 40% faster
+                    growthTime *= weatherEffects[gameState.currentWeather].growthMultiplier;
+                    
+                    // Check season - plants grow 50% slower out of season
+                    if (plants[plot.plant].season !== "all" && 
+                        plants[plot.plant].season !== seasons[gameState.currentSeason].name.toLowerCase()) {
+                        growthTime *= 1.5;
+                    }
+                    
+                    plot.growthProgress = Math.min(elapsed / growthTime, 1);
+                    
+                    if (plot.growthProgress >= 1) {
+                        plot.growth = 3; // Ready to harvest
+                        if (plot.owner === currentUser.uid) {
+                            showNotification(`Your ${plants[plot.plant].name} is ready to harvest!`, plot.plant);
+                        }
+                    }
+                    
+                    anyPlantGrowing = true;
+                } else if (plot.growth === 3) {
+                    anyPlantReady = true;
+                }
+            });
+            
+            // Update button states
+            harvestBtn.disabled = !anyPlantReady;
+            waterBtn.disabled = !anyPlantGrowing || gameState.coins < 5;
+            fertilizeBtn.disabled = !anyPlantGrowing || gameState.coins < 20;
+            
+            // Save game state periodically
+            if (Math.random() < 0.1) { // 10% chance to save each second
+                saveGame();
+            }
+        }
+        
+        function updateUI() {
+            // Player info
+            usernameDisplay.textContent = currentUser.displayName || currentUser.email.split('@')[0];
+            playerAvatar.textContent = (currentUser.displayName || currentUser.email[0]).toUpperCase();
+            coinsDisplay.textContent = gameState.coins;
+            gemsDisplay.textContent = gameState.gems;
+            
+            // XP bar
+            const xpNeeded = gameState.level * 10;
+            xpBar.style.width = `${(gameState.xp / xpNeeded) * 100}%`;
+            
+            // Season/weather
+            seasonIcon.textContent = seasons[gameState.currentSeason].icon;
+            seasonName.textContent = seasons[gameState.currentSeason].name;
+            weatherIcon.textContent = gameState.currentWeather;
+            weatherText.textContent = weatherEffects[gameState.currentWeather].text;
+            
+            // Admin badge
+            adminBadge.classList.toggle('hidden', !currentUser.isAdmin);
+            adminPanel.classList.toggle('hidden', !currentUser.isAdmin);
+        }
+        
+        function renderGarden() {
+            garden.innerHTML = '';
+            
+            gameState.gardenPlots.forEach((plot, index) => {
+                const plotElement = document.createElement('div');
+                plotElement.className = 'garden-plot';
+                
+                if (plot.plant) {
+                    const plantElement = document.createElement('div');
+                    plantElement.className = 'plant';
+                    
+                    // Show different growth stages
+                    if (plot.growth === 1) {
+                        plantElement.textContent = '🌱'; // Seed
+                    } else if (plot.growth === 2) {
+                        // Growing - show intermediate state
+                        if (plot.plant === '🌱') plantElement.textContent = '🌿';
+                        else if (plot.plant === '🌻') plantElement.textContent = '🌞';
+                        else if (plot.plant === '🥕') plantElement.textContent = '🥬';
+                        else if (plot.plant === '🍅') plantElement.textContent = '🍃';
+                        else if (plot.plant === '🍓') plantElement.textContent = '🌿';
+                    } else if (plot.growth === 3) {
+                        plantElement.textContent = plot.plant; // Fully grown
+                    }
+                    
+                    plotElement.appendChild(plantElement);
+                    
+                    // Add growth progress bar
+                    if (plot.growth === 2) {
+                        const growthBar = document.createElement('div');
+                        growthBar.className = 'growth-bar';
+                        growthBar.style.width = `${plot.growthProgress * 100}%`;
+                        plotElement.appendChild(growthBar);
+                    }
+                    
+                    // Add plot overlay
+                    const overlay = document.createElement('div');
+                    overlay.className = 'plot-overlay';
+                    
+                    if (plot.watered) {
+                        const waterIndicator = document.createElement('div');
+                        waterIndicator.className = 'plot-water';
+                        waterIndicator.textContent = '💧';
+                        overlay.appendChild(waterIndicator);
+                    }
+                    
+                    if (plot.fertilized) {
+                        const fertIndicator = document.createElement('div');
+                        fertIndicator.className = 'plot-fert';
+                        fertIndicator.textContent = '✨';
+                        overlay.appendChild(fertIndicator);
+                    }
+                    
+                    if (plot.owner && plot.owner !== currentUser.uid) {
+                        const ownerIndicator = document.createElement('div');
+                        ownerIndicator.className = 'plot-owner';
+                        ownerIndicator.textContent = gameState.onlinePlayers[plot.owner]?.name || 'Friend';
+                        overlay.appendChild(ownerIndicator);
+                    }
+                    
+                    plotElement.appendChild(overlay);
+                }
+                
+                plotElement.addEventListener('click', () => handlePlotClick(index));
+                garden.appendChild(plotElement);
+            });
+        }
+        
+        function handlePlotClick(index) {
+            const plot = gameState.gardenPlots[index];
+            
+            if (!plot.plant && selectedPlant && gameState.inventory[selectedPlant] > 0) {
+                // Plant a seed
+                gameState.inventory[selectedPlant]--;
+                plot.plant = selectedPlant;
+                plot.growth = 1; // Planted
+                plot.watered = false;
+                plot.fertilized = false;
+                plot.growthStart = null;
+                plot.growthProgress = 0;
+                plot.owner = currentUser.uid;
+                
+                gameState.totalPlants++;
+                if (!gameState.plantsGrown.includes(selectedPlant)) {
+                    gameState.plantsGrown.push(selectedPlant);
+                }
+                
+                statusDisplay.textContent = `Planted ${plants[selectedPlant].name}! Click again to start growing.`;
+                updateInventory();
+                
+                // Track if this is first plant
+                if (gameState.totalPlants === 1) {
+                    showNotification('First plant! You earned 50 coins!', '💰', 50);
+                    gameState.coins += 50;
+                    gameState.totalCoinsEarned += 50;
+                }
+            } else if (plot.plant && plot.growth === 1 && plot.owner === currentUser.uid) {
+                // Start growing (requires second click)
+                plot.growth = 2;
+                plot.growthStart = Date.now();
+                statusDisplay.textContent = `${plants[plot.plant].name} is growing! You can water or fertilize it.`;
+            } else if (plot.plant && plot.growth === 3 && plot.owner === currentUser.uid) {
+                // Harvest
+                const plantData = plants[plot.plant];
+                let sellPrice = plantData.sellPrice;
+                
+                // Season bonus - 50% more if in season
+                if (plantData.season === seasons[gameState.currentSeason].name.toLowerCase() || 
+                    plantData.season === 'all') {
+                    sellPrice = Math.floor(sellPrice * 1.5);
+                    showNotification(`Seasonal bonus for ${plantData.name}!`, seasons[gameState.currentSeason].icon);
+                }
+                
+                gameState.coins += sellPrice;
+                gameState.xp += plantData.xp;
+                gameState.totalCoinsEarned += sellPrice;
+                
+                // Check for level up
+                const xpNeeded = gameState.level * 10;
+                if (gameState.xp >= xpNeeded) {
+                    gameState.level++;
+                    gameState.xp = 0;
+                    const levelReward = gameState.level * 50;
+                    gameState.coins += levelReward;
+                    showNotification(`Level Up! You're now Level ${gameState.level}!`, '🌟', levelReward);
+                    
+                    // Unlock new plants at certain levels
+                    if (gameState.level === 3 && !gameState.inventory['🍅']) {
+                        gameState.inventory['🍅'] = 2;
+                        showNotification('Unlocked new plant: Tomato!', '🍅');
+                    }
+                    if (gameState.level === 5 && !gameState.inventory['🍓']) {
+                        gameState.inventory['🍓'] = 2;
+                        showNotification('Unlocked new plant: Strawberry!', '🍓');
+                    }
+                    if (gameState.level === 8 && !gameState.inventory['🎃']) {
+                        gameState.inventory['🎃'] = 1;
+                        showNotification('Unlocked new plant: Pumpkin!', '🎃');
+                    }
+                    if (gameState.level === 10 && !gameState.inventory['🌲']) {
+                        gameState.inventory['🌲'] = 1;
+                        showNotification('Unlocked new plant: Christmas Tree!', '🌲');
+                    }
+                }
+                
+                showNotification(`Harvested ${plantData.name} for ${sellPrice} coins!`, plot.plant, sellPrice);
+                
+                // Reset plot
+                plot.plant = null;
+                plot.growth = 0;
+                plot.watered = false;
+                plot.fertilized = false;
+                plot.growthStart = null;
+                plot.growthProgress = 0;
+                plot.owner = null;
+                
+                updateInventory();
+            } else if (plot.owner && plot.owner !== currentUser.uid) {
+                statusDisplay.textContent = `This plot belongs to ${gameState.onlinePlayers[plot.owner]?.name || 'a friend'}!`;
+            }
+            
+            renderGarden();
+        }
+        
+        function updateShop() {
+            shopItems.innerHTML = '';
+            
+            Object.entries(plants).forEach(([emoji, plant]) => {
+                const shopItem = document.createElement('div');
+                shopItem.className = 'shop-item';
+                if (selectedPlant === emoji) shopItem.classList.add('selected');
+                shopItem.dataset.plant = emoji;
+                
+                shopItem.innerHTML = `
+                    <div class="shop-item-icon">${emoji}</div>
+                    <div class="shop-item-name">${plant.name}</div>
+                    <div class="shop-item-price">${plant.cost} coins</div>
+                    <div>Sells for: ${plant.sellPrice} coins</div>
+                    <div>Grows in: ${plant.growthTime/1000}s</div>
+                `;
+                
+                shopItem.addEventListener('click', () => {
+                    selectedPlant = emoji;
+                    document.querySelectorAll('.shop-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    shopItem.classList.add('selected');
+                    statusDisplay.textContent = `Selected ${plant.name} seed`;
+                });
+                
+                shopItems.appendChild(shopItem);
+            });
+        }
+        
+        function updateInventory() {
+            inventory.innerHTML = '';
+            
+            Object.entries(gameState.inventory).forEach(([emoji, count]) => {
+                if (count > 0) {
+                    const item = document.createElement('div');
+                    item.className = 'inventory-item';
+                    
+                    item.innerHTML = `
+                        <span>${emoji}</span>
+                        <span>${plants[emoji].name}</span>
+                        <div class="inventory-item-count">${count}</div>
+                    `;
+                    
+                    item.addEventListener('click', () => {
+                        selectedPlant = emoji;
+                        statusDisplay.textContent = `Selected ${plants[emoji].name} seed`;
+                        document.querySelectorAll('.shop-item').forEach(shopItem => {
+                            shopItem.classList.toggle('selected', shopItem.dataset.plant === emoji);
+                        });
+                    });
+                    
+                    inventory.appendChild(item);
+                }
+            });
+        }
+        
+        function updateAchievements() {
+            achievementsList.innerHTML = '';
+            
+            achievements.forEach(achievement => {
+                const isUnlocked = gameState.achievementsEarned.includes(achievement.id);
+                const achievementElement = document.createElement('div');
+                achievementElement.className = `achievement ${isUnlocked ? '' : 'locked'}`;
+                
+                // Calculate progress (for progress-based achievements)
+                let progress = 0;
+                if (achievement.id === 'first_plant') {
+                    progress = gameState.totalPlants > 0 ? 100 : 0;
+                } else if (achievement.id === 'millionaire') {
+                    progress = Math.min((gameState.totalCoinsEarned / 1000) * 100, 100);
+                } else if (achievement.id === 'expert_gardener') {
+                    progress = Math.min((gameState.level / 10) * 100, 100);
+                } else if (achievement.id === 'collection_complete') {
+                    progress = Math.min((gameState.plantsGrown.length / Object.keys(plants).length) * 100, 100);
+                } else if (achievement.id === 'season_master') {
+                    progress = Math.min((gameState.seasonsPlayed.length / 4) * 100, 100);
+                }
+                
+                achievementElement.innerHTML = `
+                    <div class="achievement-icon">${isUnlocked ? achievement.icon : '🔒'}</div>
+                    <div class="achievement-info">
+                        <div class="achievement-title">${achievement.title}</div>
+                        <div class="achievement-desc">${achievement.desc}</div>
+                        ${progress > 0 ? `
+                            <div class="achievement-progress">
+                                <div class="achievement-progress-bar" style="width: ${progress}%"></div>
+                            </div>
+                        ` : ''}
+                        <div class="achievement-reward">Reward: ${achievement.reward} coins</div>
+                    </div>
+                `;
+                
+                achievementsList.appendChild(achievementElement);
+            });
+        }
+        
+        function checkAchievements() {
+            achievements.forEach(achievement => {
+                if (!gameState.achievementsEarned.includes(achievement.id) && 
+                    achievement.condition(gameState)) {
+                    
+                    gameState.achievementsEarned.push(achievement.id);
+                    gameState.coins += achievement.reward;
+                    gameState.totalCoinsEarned += achievement.reward;
+                    
+                    showNotification(`Achievement Unlocked: ${achievement.title}!`, '🏆', achievement.reward);
+                    updateAchievements();
+                }
+            });
+        }
+        
+        function startWeatherCycle() {
+            // Change weather every 30-60 seconds
+            weatherInterval = setInterval(() => {
+                const possibleWeather = seasons[gameState.currentSeason].weather;
+                gameState.currentWeather = possibleWeather[Math.floor(Math.random() * possibleWeather.length)];
+                gameState.weatherChangeTime = Date.now();
+                
+                showNotification(`Weather changed to ${weatherEffects[gameState.currentWeather].text}`, gameState.currentWeather);
+                updateUI();
+            }, 30000 + Math.random() * 30000);
+        }
+        
+        function startSeasonCycle() {
+            // Change season every 2 minutes (for demo purposes)
+            seasonInterval = setInterval(() => {
+                gameState.currentSeason = (gameState.currentSeason + 1) % seasons.length;
+                gameState.seasonStartTime = Date.now();
+                
+                if (!gameState.seasonsPlayed.includes(gameState.currentSeason)) {
+                    gameState.seasonsPlayed.push(gameState.currentSeason);
+                }
+                
+                showNotification(`Season changed to ${seasons[gameState.currentSeason].name}!`, seasons[gameState.currentSeason].icon);
+                updateUI();
+                
+                // Change weather immediately when season changes
+                clearInterval(weatherInterval);
+                startWeatherCycle();
+            }, 120000);
+        }
+        
+        function updateDailyReward() {
+            const now = Date.now();
+            const lastClaim = gameState.lastDailyReward || 0;
+            const timeSinceLastClaim = now - lastClaim;
+            const timeUntilNextClaim = 86400000 - timeSinceLastClaim; // 24 hours
+            
+            if (timeSinceLastClaim >= 86400000) {
+                dailyRewardBtn.disabled = false;
+                nextReward.textContent = "Available now!";
+            } else {
+                dailyRewardBtn.disabled = true;
+                const hours = Math.floor(timeUntilNextClaim / 3600000);
+                const minutes = Math.floor((timeUntilNextClaim % 3600000) / 60000);
+                nextReward.textContent = `${hours}h ${minutes}m`;
+            }
+        }
+        
+        function claimDailyReward() {
+            const reward = 100 + (gameState.level * 10);
+            gameState.coins += reward;
+            gameState.lastDailyReward = Date.now();
+            
+            showNotification(`Daily Reward: ${reward} coins!`, '🎁', reward);
+            updateDailyReward();
+            dailyRewardBtn.disabled = true;
+            
+            // Streak achievement
+            if (!gameState.lastDailyReward) {
+                showNotification('Started your daily streak! Come back tomorrow!', '🔥');
+            }
+        }
+        
+        function showNotification(message, icon, coins = 0) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            
+            notification.innerHTML = `
+                <span style="font-size: 24px;">${icon}</span>
+                <div>
+                    <div>${message}</div>
+                    ${coins > 0 ? `<div style="font-size: 12px;">+${coins} coins</div>` : ''}
+                </div>
+            `;
+            
+            notificationContainer.appendChild(notification);
+            
+            // Remove after animation
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        // ======================
+        // Multiplayer Functions
+        // ======================
+        function setupMultiplayer() {
+            if (!currentUser) return;
+            
+            // Reference to our player data in Firebase
+            const playerRef = database.ref(`players/${currentUser.uid}`);
+            
+            // Update our player data
+            playerRef.set({
+                name: currentUser.displayName || currentUser.email.split('@')[0],
+                email: currentUser.email,
+                lastOnline: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            // Listen for other players
+            database.ref('players').on('value', (snapshot) => {
+                const players = snapshot.val() || {};
+                gameState.onlinePlayers = players;
+                
+                // Update online count
+                onlineCount.textContent = Object.keys(players).length;
+                
+                // Update online players list
+                onlinePlayers.innerHTML = '';
+                Object.entries(players).forEach(([uid, player]) => {
+                    if (uid === currentUser.uid) return;
+                    
+                    const playerElement = document.createElement('div');
+                    playerElement.className = 'player';
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'player-avatar';
+                    avatar.textContent = player.name[0].toUpperCase();
+                    playerElement.appendChild(avatar);
+                    
+                    const name = document.createElement('span');
+                    name.textContent = player.name;
+                    playerElement.appendChild(name);
+                    
+                    onlinePlayers.appendChild(playerElement);
+                });
+            });
+            
+            // Update our last online time every 30 seconds
+            setInterval(() => {
+                playerRef.update({
+                    lastOnline: firebase.database.ServerValue.TIMESTAMP
+                });
+            }, 30000);
+            
+            // Clean up disconnected players
+            database.ref('players').onDisconnect().remove();
+        }
+        
+        // ======================
+        // Admin Functions
+        // ======================
+        function adminInstantGrow() {
+            gameState.gardenPlots.forEach(plot => {
+                if (plot.plant && plot.growth === 2) {
+                    plot.growth = 3;
+                    plot.growthProgress = 1;
+                }
+            });
+            
+            showNotification('Admin: All plants instantly grew!', '⚡');
+            renderGarden();
+        }
+        
+        function adminAddMoney() {
+            gameState.coins += 1000;
+            showNotification('Admin: +1000 coins!', '💰', 1000);
+            updateUI();
+        }
+        
+        function adminAddSeeds() {
+            Object.keys(gameState.inventory).forEach(seed => {
+                gameState.inventory[seed] += 10;
+            });
+            
+            showNotification('Admin: +10 of all seeds!', '🌱');
+            updateInventory();
+        }
+        
+        function adminChangeWeather() {
+            const possibleWeather = seasons[gameState.currentSeason].weather;
+            gameState.currentWeather = possibleWeather[Math.floor(Math.random() * possibleWeather.length)];
+            gameState.weatherChangeTime = Date.now();
+            
+            showNotification(`Admin: Weather changed to ${weatherEffects[gameState.currentWeather].text}`, gameState.currentWeather);
+            updateUI();
+        }
+        
+        // ======================
+        // Save/Load Functions
+        // ======================
+        function saveGame() {
+            if (!currentUser) return;
+            
+            const saveData = {
+                ...gameState,
+                // Don't save these in Firebase
+                onlinePlayers: undefined,
+                currentWeather: undefined,
+                weatherChangeTime: undefined,
+                seasonStartTime: undefined
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('gardenGameSave', JSON.stringify(saveData));
+            
+            // Save to Firebase if logged in
+            if (currentUser.uid) {
+                database.ref(`users/${currentUser.uid}/gameState`).set(saveData);
+            }
+        }
+        
+        function loadGame() {
+            // Try to load from localStorage first
+            const savedData = JSON.parse(localStorage.getItem('gardenGameSave'));
+            
+            if (savedData) {
+                // Merge with current game state
+                gameState = {
+                    ...gameState,
+                    ...savedData,
+                    // Reset these
+                    onlinePlayers: {},
+                    currentWeather: '☀️',
+                    weatherChangeTime: Date.now(),
+                    seasonStartTime: Date.now()
+                };
+                
+                // Make sure inventory has all plant types
+                Object.keys(plants).forEach(plant => {
+                    if (gameState.inventory[plant] === undefined) {
+                        gameState.inventory[plant] = 0;
+                    }
+                });
+                
+                showNotification('Welcome back! Your garden has been loaded.', '🌱');
+            }
+            
+            // If user is logged in, try to load from Firebase
+            if (currentUser && currentUser.uid) {
+                database.ref(`users/${currentUser.uid}/gameState`).once('value').then(snapshot => {
+                    const firebaseData = snapshot.val();
+                    if (firebaseData) {
+                        gameState = {
+                            ...gameState,
+                            ...firebaseData,
+                            onlinePlayers: {},
+                            currentWeather: '☀️',
+                            weatherChangeTime: Date.now(),
+                            seasonStartTime: Date.now()
+                        };
+                        
+                        showNotification('Loaded your cloud save!', '☁️');
+                    }
+                });
+            }
+        }
+        
+        // ======================
+        // Event Listeners
+        // ======================
+        // Login
+        loginBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            // For demo purposes - predefined users
+            if (email === 'admin@garden.com' && password === '123456') {
+                currentUser = {
+                    uid: 'admin123',
+                    email: 'admin@garden.com',
+                    displayName: 'Admin',
+                    isAdmin: true
+                };
+                
+                loginScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                initGame();
+            } else if (email === 'player@garden.com' && password === '123456') {
+                currentUser = {
+                    uid: 'player123',
+                    email: 'player@garden.com',
+                    displayName: 'Player',
+                    isAdmin: false
+                };
+                
+                loginScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                initGame();
+            } else {
+                loginError.textContent = 'Invalid email or password!';
+            }
+        });
+        
+        // Guest login
+        guestBtn.addEventListener('click', () => {
+            currentUser = {
+                uid: `guest_${Math.random().toString(36).substr(2, 9)}`,
+                email: 'guest@example.com',
+                displayName: 'Guest',
+                isAdmin: false
+            };
+            
+            loginScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            initGame();
+        });
+        
+        // Plant selection
+        plantSelect.addEventListener('change', (e) => {
+            selectedPlant = e.target.value;
+            plantBtn.disabled = !selectedPlant || gameState.inventory[selectedPlant] <= 0;
+            
+            if (selectedPlant) {
+                statusDisplay.textContent = `Selected ${plants[selectedPlant].name} seed`;
+            }
+        });
+        
+        // Water all plants
+        waterBtn.addEventListener('click', () => {
+            if (gameState.coins >= 5) {
+                let wateredAny = false;
+                
+                gameState.gardenPlots.forEach(plot => {
+                    if (plot.plant && plot.growth === 2 && !plot.watered && plot.owner === currentUser.uid) {
+                        plot.watered = true;
+                        wateredAny = true;
+                    }
+                });
+                
+                if (wateredAny) {
+                    gameState.coins -= 5;
+                    showNotification('Watered all plants! They will grow 20% faster.', '💧');
+                } else {
+                    statusDisplay.textContent = 'No plants need watering right now.';
+                }
+            } else {
+                statusDisplay.textContent = 'You need 5 coins to water plants!';
+            }
+        });
+        
+        // Fertilize all plants
+        fertilizeBtn.addEventListener('click', () => {
+            if (gameState.coins >= 20) {
+                let fertilizedAny = false;
+                
+                gameState.gardenPlots.forEach(plot => {
+                    if (plot.plant && plot.growth === 2 && !plot.fertilized && plot.owner === currentUser.uid) {
+                        plot.fertilized = true;
+                        fertilizedAny = true;
+                    }
+                });
+                
+                if (fertilizedAny) {
+                    gameState.coins -= 20;
+                    showNotification('Fertilized all plants! They will grow 40% faster.', '✨');
+                } else {
+                    statusDisplay.textContent = 'No plants need fertilizer right now.';
+                }
+            } else {
+                statusDisplay.textContent = 'You need 20 coins to fertilize plants!';
+            }
+        });
+        
+        // Harvest all ready plants
+        harvestBtn.addEventListener('click', () => {
+            let totalHarvest = 0;
+            
+            gameState.gardenPlots.forEach(plot => {
+                if (plot.plant && plot.growth === 3 && plot.owner === currentUser.uid) {
+                    const plantData = plants[plot.plant];
+                    let sellPrice = plantData.sellPrice;
+                    
+                    // Season bonus
+                    if (plantData.season === seasons[gameState.currentSeason].name.toLowerCase() || 
+                        plantData.season === 'all') {
+                        sellPrice = Math.floor(sellPrice * 1.5);
+                    }
+                    
+                    totalHarvest += sellPrice;
+                    gameState.xp += plantData.xp;
+                    gameState.totalCoinsEarned += sellPrice;
+                    
+                    // Reset plot
+                    plot.plant = null;
+                    plot.growth = 0;
+                    plot.watered = false;
+                    plot.fertilized = false;
+                    plot.growthStart = null;
+                    plot.growthProgress = 0;
+                    plot.owner = null;
+                }
+            });
+            
+            if (totalHarvest > 0) {
+                gameState.coins += totalHarvest;
+                showNotification(`Harvested plants for ${totalHarvest} coins!`, '🛒', totalHarvest);
+                renderGarden();
+                
+                // Check for level up
+                const xpNeeded = gameState.level * 10;
+                if (gameState.xp >= xpNeeded) {
+                    gameState.level++;
+                    gameState.xp = 0;
+                    const levelReward = gameState.level * 50;
+                    gameState.coins += levelReward;
+                    showNotification(`Level Up! You're now Level ${gameState.level}!`, '🌟', levelReward);
+                }
+            } else {
+                statusDisplay.textContent = 'No plants are ready to harvest!';
+            }
+        });
+        
+        // Daily reward
+        dailyRewardBtn.addEventListener('click', claimDailyReward);
+        
+        // Admin buttons
+        adminGrowBtn.addEventListener('click', adminInstantGrow);
+        adminMoneyBtn.addEventListener('click', adminAddMoney);
+        adminSeedsBtn.addEventListener('click', adminAddSeeds);
+        adminWeatherBtn.addEventListener('click', adminChangeWeather);
+        
+        // Logout
+        window.addEventListener('beforeunload', () => {
+            saveGame();
+            
+            // Clean up Firebase connection
+            if (currentUser && currentUser.uid) {
+                database.ref(`players/${currentUser.uid}`).remove();
+            }
+        });
+        
+        // Initialize plant select
+        updatePlantSelect();
+    </script>
+</body>
+</html>
